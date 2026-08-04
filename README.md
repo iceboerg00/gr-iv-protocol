@@ -4,7 +4,7 @@ Reverse-engineered documentation of the Ricoh GR IV's remote-control interfaces
 (firmware **v1.11**), captured while building [GRade](https://apps.apple.com/app/id6792491646),
 a free recipe app for the GR IV. Everything here was verified against a real camera —
 via BLE HCI captures of the official GR World app, the camera's Wi-Fi HTTP API, and
-firmware analysis. Shared so the open-source gear community can build on it.
+firmware analysis.
 
 ## The two references
 
