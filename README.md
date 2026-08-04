@@ -1,41 +1,60 @@
-# Ricoh GR IV — Bluetooth & Wi-Fi Protocol Documentation
+# Ricoh GR IV — Bluetooth & Wi-Fi Remote Control Documentation
 
-Reverse-engineered documentation of the Ricoh GR IV's remote control interfaces,
-created while building [GRade](https://apps.apple.com/app/id6792491646), a free
-recipe app for the GR IV. Shared so the open-source gear community can build on it.
+Reverse-engineered documentation of the Ricoh GR IV's remote-control interfaces
+(firmware **v1.11**), captured while building [GRade](https://apps.apple.com/app/id6792491646),
+a free recipe app for the GR IV. Everything here was verified against a real camera —
+via BLE HCI captures of the official GR World app, the camera's Wi-Fi HTTP API, and
+firmware analysis. Shared so the open-source gear community can build on it.
 
-Everything here was captured from BLE HCI snoops of the official GR World app,
-the camera's Wi-Fi HTTP API, and firmware analysis — verified against a real GR IV.
+## The two references
 
-## Contents
+- **[GR_IV_Remote_Control_API.md](GR_IV_Remote_Control_API.md)** — the complete surface.
+  BLE services and pairing, live shooting settings (ISO, aperture, shutter, EV, WB,
+  focus), the Wi-Fi HTTP API (all endpoints, `PUT /v1/params/…`, live view, photo
+  browsing), drive modes, and known limitations. **Start here.**
+- **[RECIPES.md](RECIPES.md)** — the deep dive on the Image Control "recipe" format:
+  the exact 56-byte parameter block, every parameter ID and its encoding, the base
+  codes, and how reading/writing the three custom slots works over BLE.
 
-| File | What's inside |
-|---|---|
-| [GATT_MAP.md](GATT_MAP.md) | Full BLE GATT table: services, characteristics, flags — pairing, camera status, battery, mode dial, recipe slots, Wi-Fi provisioning, wake from sleep / power off |
-| [PROTOCOL.md](PROTOCOL.md) | The Image Control recipe protocol: the 56-byte parameter block, slot name characteristics, parameter IDs and value encodings |
-| [GR_IV_Remote_Control_API.md](GR_IV_Remote_Control_API.md) | The Wi-Fi HTTP API: endpoints for shooting (`/v1/camera/shoot`, `/v1/lens/focus`), live params (`sv` = ISO, `av` = aperture, `tv` = shutter, `xv` = EV, WB modes), props, image browsing/download |
-| [FIRMWARE_API.md](FIRMWARE_API.md) | Parameter tables and constraints extracted from firmware analysis — what is readable vs. writable |
-| [RECIPES.md](RECIPES.md) | Deep dive into the Image Control recipe space: bases, parameter ranges, display vs. wire encodings, U-mode quirks |
+## The 60-second picture
 
-## Hard-won gotchas
+The GR IV has two cooperating radios:
 
-- The HTTP API returns **HTTP 200 with an `errCode` inside the JSON body** — always
-  check the body, not just the status code.
-- The camera accepts **only one BLE connection at a time**. A backgrounded official
-  app will block yours.
-- Grain/toning values are **0-based on the wire** while the camera UI displays them
-  1-based. Writing the displayed value gets rejected with ATT error 0x80.
-- In U1–U3 dial modes, written recipe slots are **temporary** until "Save User Mode
-  Box" is run on the camera.
-- Wake from sleep: write `0` to the OperationMode characteristic; power off: write
-  `0` to CameraPower (see GATT_MAP.md). A fully powered-off camera has BLE off —
-  nothing can wake it.
+- **BLE = control channel.** Pairing, status, waking the camera, switching the Wi-Fi AP
+  on/off, a handful of live settings (ISO/WB/shutter/EV/focus), and writing the three
+  custom Image Control recipe slots.
+- **Wi-Fi = data channel.** An HTTP server at `http://192.168.0.1` for the full settings
+  model, live view (MJPEG), and photo browsing/download.
+
+Typical flow: pair over BLE → optionally enable the Wi-Fi AP over BLE → join it → use
+the HTTP API. The camera uses the **same BLE UUIDs as the GR II/III**, so
+[dm-zharov's GR III API](https://github.com/dm-zharov/ricoh-gr-bluetooth-api) is a useful
+companion for the shared parts.
+
+## Gotchas that cost real time
+
+- The HTTP API returns **HTTP 200 with an `errCode` inside the JSON body** — always check
+  the body, not just the status code.
+- `PUT /v1/params/…` needs **form-urlencoded** bodies (JSON → 400) and the method must be
+  **PUT** (POST → 404). Parameter names must match `props` exactly.
+- The camera accepts **only one BLE connection at a time**. A backgrounded official app
+  will block yours.
+- Recipe writing is **BLE, not Wi-Fi** — the `/v1/imgctrl` HTTP path is a dead end (404).
+- Grain/toning are **0-based on the wire**, 1-based in the camera UI; writing the
+  displayed value gets rejected with ATT app error `0x80`. `filterEffect` only takes 0/1
+  over BLE.
+- In U1–U3 dial modes, written recipe slots are **temporary** until "Save User Mode Box"
+  is run on the camera.
+- Pairing is **numeric-comparison** (6-digit code on both sides); plain auto-pairing is
+  not enough. The Windows BLE stack cannot hold the encrypted connection — use
+  Linux/BlueZ, macOS, iOS or Android.
+- Waking: write `0` to the OperationMode characteristic to wake from sleep; write `0` to
+  CameraPower to power off. A fully powered-off camera has BLE off — nothing can wake it.
 
 ## Disclaimer
 
-This is an independent community effort, not affiliated with or endorsed by Ricoh
-Imaging Company, Ltd. "RICOH" and "GR" are trademarks of their respective owners.
-Use at your own risk.
+Independent community effort, not affiliated with or endorsed by Ricoh Imaging Company,
+Ltd. "RICOH" and "GR" are trademarks of their respective owners. Use at your own risk.
 
 ## License
 

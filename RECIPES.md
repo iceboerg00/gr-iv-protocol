@@ -2,11 +2,11 @@
 
 Complete technical documentation of the recipe format and the transfer protocol, as
 implemented in this project and verified against a real camera (RICOH GR IV HDF,
-firmware 1.11, serial REDACTED).
+firmware 1.11).
 
-This document is the **authoritative reference**. `PROTOCOL.md` and `GATT_MAP.md` are
-kept as historical reverse-engineering logs — they still describe some questions as
-open that have since been answered here.
+This is the deep dive on the **recipe format** specifically. For the full remote-control
+surface (all Wi-Fi HTTP endpoints, live BLE settings, focus, live view, etc.) see
+[GR_IV_Remote_Control_API.md](GR_IV_Remote_Control_API.md).
 
 ---
 

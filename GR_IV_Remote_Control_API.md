@@ -361,3 +361,24 @@ GPS astrotracer mode: `ASTRO_TRACER_TYPE3`.
 | Turn the camera Wi-Fi AP on | BLE | Wi-Fi control service (§2.2) |
 | WB compensation remotely | — | Not possible (§4) |
 
+---
+
+## 6. Firmware internals (for the curious)
+
+Provenance and internal layout, in case it helps someone dig further:
+
+- Firmware is embedded Linux (Yocto/Poky **kirkstone 4.0.20**, ARM 32-bit).
+- Three user-space daemons matter: **`webapid`** (the HTTP server, built on the "Crow"
+  C++ framework), **`bled`** (the BLE GATT server), and **`camctld`** (the camera core).
+- `webapid` and `bled` are thin front-ends. They forward requests to `camctld` over a
+  local **gRPC/protobuf** channel (`RemoteCameraCommand/CameraCommandSync`,
+  `RemoteInterfaceCommand`, Property/Status/ExpStatus event dispatchers,
+  `RemoteSharedMemory`). Only what those two front-ends expose is remotely reachable.
+- There is a `FactoryCmdset` (service/factory commands, `GPSetValue`/`GPSetData`) inside
+  `camctld`, but it is **local only** — not exposed over Wi-Fi or BLE.
+
+This is why probing for hidden features via HTTP/BLE is a dead end: if a setting has no
+handler in `webapid`/`bled`, it is simply not reachable, regardless of what the core can
+do. (This is how the "WB compensation is not remotely settable" conclusion in §4 was
+reached — the handler does not exist in either front-end.)
+
